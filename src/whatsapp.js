@@ -25,27 +25,25 @@ export const init = async () => {
 
   sock.ev.on('creds.update', saveCreds);
 
-  // Solicitar código de vinculación si no hay sesión activa
-  if (!state.creds.registered) {
-    const botNumber = process.env.WHATSAPP_BOT_NUMBER;
-    if (botNumber) {
-      setTimeout(async () => {
+  sock.ev.on('connection.update', async ({ connection, lastDisconnect, qr }) => {
+    // Cuando aparece el QR, pedimos código de vinculación en su lugar
+    if (qr && !state.creds.registered) {
+      const botNumber = process.env.WHATSAPP_BOT_NUMBER;
+      if (botNumber) {
         try {
           const code = await sock.requestPairingCode(botNumber);
-          logger.info(`============================================`);
+          logger.info('============================================');
           logger.info(`CÓDIGO DE VINCULACIÓN: ${code}`);
-          logger.info(`WhatsApp → Dispositivos vinculados → Vincular dispositivo → Vincular con número de teléfono`);
-          logger.info(`============================================`);
+          logger.info('WhatsApp → Dispositivos vinculados → Vincular dispositivo → "Vincular con número de teléfono"');
+          logger.info('============================================');
         } catch (err) {
           logger.error(`Error solicitando código: ${err.message}`);
         }
-      }, 3000);
-    } else {
-      logger.warn('WHATSAPP_BOT_NUMBER no configurado, no se puede generar código de vinculación');
+      } else {
+        logger.warn('WHATSAPP_BOT_NUMBER no configurado');
+      }
     }
-  }
 
-  sock.ev.on('connection.update', async ({ connection, lastDisconnect }) => {
     if (connection === 'open') {
       isConnected = true;
       logger.success('WhatsApp conectado');
