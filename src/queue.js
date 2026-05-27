@@ -22,6 +22,11 @@ const processEntry = async ({ rawEvent }) => {
 
   logger.info(`Procesando: ${ev.type} | "${ev.itemName}"`);
 
+  // Esperar que Monday sincronice todos los campos del formulario antes de consultar
+  if (ev.type === 'new_client') {
+    await new Promise((r) => setTimeout(r, 8000));
+  }
+
   const item = ev.itemId ? await getItemById(ev.itemId) : null;
   const msg = await generateMessage(ev, item);
 
