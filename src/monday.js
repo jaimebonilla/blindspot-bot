@@ -34,6 +34,15 @@ export const getBoardColumns = async (boardId) => {
   return data.boards[0]?.columns ?? [];
 };
 
+const normalizeItems = (items) =>
+  items.map((item) => ({
+    ...item,
+    column_values: item.column_values.map((cv) => ({
+      ...cv,
+      title: cv.column?.title ?? cv.id,
+    })),
+  }));
+
 export const getBoardItems = async (boardId) => {
   const data = await gql(
     `query($id: ID!) {
@@ -43,14 +52,20 @@ export const getBoardItems = async (boardId) => {
             id
             name
             updated_at
-            column_values { id title type value text }
+            column_values {
+              id
+              type
+              value
+              text
+              column { title }
+            }
           }
         }
       }
     }`,
     { id: String(boardId) }
   );
-  return data.boards[0]?.items_page?.items ?? [];
+  return normalizeItems(data.boards[0]?.items_page?.items ?? []);
 };
 
 export const getItemById = async (itemId) => {
@@ -61,12 +76,19 @@ export const getItemById = async (itemId) => {
         name
         updated_at
         board { id name }
-        column_values { id title type value text }
+        column_values {
+          id
+          type
+          value
+          text
+          column { title }
+        }
       }
     }`,
     { id: String(itemId) }
   );
-  return data.items?.[0] ?? null;
+  const item = data.items?.[0] ?? null;
+  return item ? normalizeItems([item])[0] : null;
 };
 
 export const getItemsWithUpcomingDates = async (boardId, daysAhead) => {
