@@ -2,7 +2,6 @@ import makeWASocket, {
   useMultiFileAuthState,
   DisconnectReason,
 } from '@whiskeysockets/baileys';
-import qrcode from 'qrcode-terminal';
 import { logger } from './logger.js';
 
 let sock = null;
@@ -26,12 +25,27 @@ export const init = async () => {
 
   sock.ev.on('creds.update', saveCreds);
 
-  sock.ev.on('connection.update', async ({ connection, lastDisconnect, qr }) => {
-    if (qr) {
-      logger.info('Escaneá este QR con WhatsApp → Dispositivos vinculados → Vincular dispositivo:');
-      qrcode.generate(qr, { small: true });
+  // Solicitar código de vinculación si no hay sesión activa
+  if (!state.creds.registered) {
+    const botNumber = process.env.WHATSAPP_BOT_NUMBER;
+    if (botNumber) {
+      setTimeout(async () => {
+        try {
+          const code = await sock.requestPairingCode(botNumber);
+          logger.info(`============================================`);
+          logger.info(`CÓDIGO DE VINCULACIÓN: ${code}`);
+          logger.info(`WhatsApp → Dispositivos vinculados → Vincular dispositivo → Vincular con número de teléfono`);
+          logger.info(`============================================`);
+        } catch (err) {
+          logger.error(`Error solicitando código: ${err.message}`);
+        }
+      }, 3000);
+    } else {
+      logger.warn('WHATSAPP_BOT_NUMBER no configurado, no se puede generar código de vinculación');
     }
+  }
 
+  sock.ev.on('connection.update', async ({ connection, lastDisconnect }) => {
     if (connection === 'open') {
       isConnected = true;
       logger.success('WhatsApp conectado');
